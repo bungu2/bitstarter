@@ -40,9 +40,7 @@ var assertFileExists = function(infile) {
 var cheerioHtmlFile = function(htmlfile) {
     return cheerio.load(fs.readFileSync(htmlfile));
 };
-var cheerioHtmlurl = function(htmlurl) {
-    return cheerio.load(rest.get(htmlurl).on('complete', function(data) {data}));
-};
+
 var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
@@ -57,8 +55,9 @@ var checkHtmlFile = function(htmlfile, checksfile) {
     }
     return out;
 };
-var checkHtmlurl = function(htmlurl, checksfile) {
-    $ = cheerioHtmlurl(htmlurl);
+
+var checkHtml = function(html, checksfile) {
+    $ = cheerio.load(html);
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -67,6 +66,7 @@ var checkHtmlurl = function(htmlurl, checksfile) {
     }
     return out;
 };
+
 //rest.get('http://tranquil-reaches-9979.herokuapp.com').on('complete', function(result){console.log(result);});
 
 
@@ -80,10 +80,14 @@ if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-        .option('-l, --url <html_url>', 'url to index.html')
+        .option('-u, --url <html_url>', 'url to index.html')
         .parse(process.argv);
     if (program.file) var checkJson = checkHtmlFile(program.file, program.checks);
-    if (program.url) var checkJson = checkHtmlurl(program.url, program.checks);
+    if (program.url) {
+      rest.get(program.url).on('complete', function(result) {
+      	var checkJson = checkHtml(result, program.checks);
+	});
+	}
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
 } else {
